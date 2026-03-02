@@ -107,6 +107,8 @@ docker compose restart
 
 ## Déploiement automatique (GitHub Actions)
 
+**RACI :** DevOps contrôle le processus ; Pentester assiste (validation sécurité, secrets, accès).
+
 Un push sur `main` déclenche le workflow `.github/workflows/deploy.yml` : transfert tar + `contabo_safe_deploy.sh`.
 
 **Configuration (une seule fois) :**

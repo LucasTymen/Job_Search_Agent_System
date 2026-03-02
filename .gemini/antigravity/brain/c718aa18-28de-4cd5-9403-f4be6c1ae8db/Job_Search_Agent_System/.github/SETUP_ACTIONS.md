@@ -1,5 +1,7 @@
 # Configuration GitHub Actions — Déploiement
 
+**RACI :** DevOps pilote le processus ; Pentester assiste sur la sécurité (secrets, accès SSH).
+
 ## 1. Ajouter les secrets
 
 1. Va sur https://github.com/LucasTymen/Job_Search_Agent_System

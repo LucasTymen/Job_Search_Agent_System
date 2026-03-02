@@ -78,7 +78,7 @@ Intents possibles:
 - pipeline: lancer candidature sur une offre (URL fournie)
 - pipeline_all: candidater sur toutes les offres du dernier scan
 - agents: liste des agents du système (Scraper, Matching, Generator, Drafter)
-- raci: qui fait quoi, RACI, chef de projet, expert automatisation
+- raci: qui fait quoi, RACI, chef de projet, expert automatisation, devops, pentester
 - help: aide générale, commandes
 - unknown: aucune intention reconnue
 
