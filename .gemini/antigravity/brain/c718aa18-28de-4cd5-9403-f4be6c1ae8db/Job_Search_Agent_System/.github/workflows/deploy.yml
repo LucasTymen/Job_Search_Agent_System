@@ -1,6 +1,6 @@
 # Déploiement automatique sur Contabo à chaque push sur main
 # Prérequis : configurer les secrets GitHub (Settings > Secrets and variables > Actions)
-#   - SSH_HOST : 173.249.4.106 (ou ton IP)
+#   - SSH_HOST : 173.249.4.106
 #   - SSH_USER : root
 #   - SSH_PRIVATE_KEY : contenu de ta clé privée (id_ed25519_contabo ou id_rsa_contabo)
 
@@ -9,7 +9,7 @@ name: Deploy to Contabo
 on:
   push:
     branches: [main]
-  workflow_dispatch:  # Permet de lancer manuellement depuis l'onglet Actions
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -17,6 +17,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Find project root
+        id: project
+        run: |
+          if [ -f docker-compose.yml ]; then
+            echo "dir=." >> $GITHUB_OUTPUT
+          else
+            DIR=$(find . -name 'docker-compose.yml' -type f | head -1 | xargs dirname)
+            echo "dir=${DIR:-.}" >> $GITHUB_OUTPUT
+          fi
 
       - name: Setup SSH
         run: |
@@ -30,6 +40,7 @@ jobs:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
         run: |
+          cd "${{ steps.project.outputs.dir }}"
           tar --exclude=.env --exclude=venv --exclude=.git --exclude=__pycache__ \
               --exclude=.pytest_cache --exclude=htmlcov --exclude='*.db' --exclude='*.log' \
               -cvf - . | ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new \
