@@ -37,7 +37,7 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
-        echo "0 */2 * * * cd /app && python -m scheduler.cron_runner --mode both --sources wttj,francetravail,indeed,hellowork,dogfinance,meteojob,glassdoor,linkedin,apec --max 10 >> /app/logs/cron.log 2>&1" > /tmp/cron.txt && \
+        echo "0 2,6,12,19 * * * cd /app && python -m scheduler.cron_runner --mode both --sources wttj,francetravail,indeed,hellowork,dogfinance,meteojob,glassdoor,linkedin,apec --max 10 >> /app/logs/cron.log 2>&1" > /tmp/cron.txt && \
         echo "0 8 * * * cd /app && python -m scheduler.followup_runner >> /app/logs/followup.log 2>&1" >> /tmp/cron.txt && \
         crontab /tmp/cron.txt
         cron -f

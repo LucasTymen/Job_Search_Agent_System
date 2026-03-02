@@ -13,7 +13,8 @@
 2. **Cron relances :** `followup_runner` — séquence **J0 → J2 → J1 → J1 → J2** (J+2, J+4, J+7, J+9) via Gmail drafts
 3. **Découverte :** requêtes persona-driven (`persona_queries.py`)
 4. **Matching :** déterministe Python (MatchingEngine), seuils POSTULER >= 60
-5. **Telegram :** `/pipeline <url> [draft]` + **chatbot langage naturel** (ex. « Candidater sur [url] », « Lance le pipeline et crée le brouillon »)
+5. **Telegram :** `/pipeline <url> [draft]` — accepte fiche d'offre ou **page de recherche** (Glassdoor, Indeed, WTTJ, etc.) : annonces extraites et traitées une par une. Chatbot langage naturel.
+6. **Déploiement :** GitHub Actions (`.github/workflows/deploy.yml`) — push main → transfert tar + `contabo_safe_deploy.sh`. Secrets : `SSH_HOST`, `SSH_USER`, `SSH_PRIVATE_KEY`. Voir `scripts/DEPLOIEMENT_SAFE.md`.
 
 ## Rédaction (LM & Emails)
 - **Directives partagées :** `REDACTION_DIRECTIVES` dans `agents/generator.py` — ton formel et chaleureux, **pas** « Bonjour / J'espère que vous allez bien », formule « Monsieur, Madame, » (personnalisable si recruteur connu), structure besoins entreprise → solutions argumentées, 20–30 lignes max, **0% hallucination**, référence + intitulé cités (corps ou objet). **Aucun placeholder** type `{{titre_poste}}` : utiliser les valeurs fournies ou omettre.

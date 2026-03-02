@@ -17,8 +17,5 @@ RUN playwright install chromium
 COPY . .
 
 RUN mkdir -p /app/storage /app/logs /app/resources
-RUN echo "0 */2 * * * root cd /app && python -m scheduler.cron_runner --mode both --sources wttj,francetravail,indeed,hellowork,dogfinance,meteojob,glassdoor,linkedin,apec --max 10 >> /app/logs/cron.log 2>&1" > /etc/cron.d/job_agent && \
-    echo "0 8 * * * root cd /app && python -m scheduler.followup_runner >> /app/logs/followup.log 2>&1" >> /etc/cron.d/job_agent && \
-    chmod 0644 /etc/cron.d/job_agent
-
+# Cron configuré au démarrage par docker-compose (évite doublon avec /etc/cron.d)
 CMD ["cron", "-f"]

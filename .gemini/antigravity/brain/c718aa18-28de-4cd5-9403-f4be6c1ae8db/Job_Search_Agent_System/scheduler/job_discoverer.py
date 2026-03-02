@@ -518,6 +518,267 @@ def _discover_jobs_adecco(max_jobs: int, base_json: dict | None = None) -> list[
     return urls
 
 
+# ---------------------------------------------------------------------------
+# Extraction depuis une URL de page de recherche (user-pasted)
+# ---------------------------------------------------------------------------
+
+def is_search_page(url: str) -> bool:
+    """
+    Détecte si l'URL pointe vers une page de recherche/listing (et non une fiche d'offre).
+    """
+    u = url.lower()
+    # Glassdoor (com + fr) : SRCH_IL, emplois-SRCH = page de recherche
+    if "glassdoor" in u and ("srch_il" in u or "emplois-srch" in u):
+        return True
+    # Indeed : /jobs? = page de résultats
+    if "indeed" in u and "/jobs?" in u:
+        return True
+    # France Travail : /offres/recherche? (pas /detail/)
+    if "francetravail" in u and "/offres/recherche" in u and "/detail/" not in u:
+        return True
+    # WTTJ : /jobs? ou /fr/jobs? = listing
+    if "welcometothejungle" in u and "/jobs" in u and "query=" in u:
+        return True
+    # HelloWork : /emploi/metier_ ou /emploi/mot-cle_ = listing
+    if "hellowork" in u and ("/emploi/metier_" in u or "/emploi/mot-cle_" in u):
+        return True
+    # Meteojob : /jobs ou /emploi- sans id
+    if "meteojob" in u and ("/jobs" in u or "/emploi-" in u):
+        return True
+    # ChooseYourBoss : /offres/emploi
+    if "chooseyourboss" in u and "/offres/" in u and "/candidates/offers/" not in u:
+        return True
+    # APEC : parcourir, recherche-emploi
+    if "apec" in u and ("parcourir" in u or "recherche-emploi" in u):
+        return True
+    # Manpower : /offre-emploi/ ou /offre-emploi? = listing
+    if "manpower" in u and "/offre-emploi" in u:
+        return True
+    # Adecco : /emploi/ ou /emploi/recherche = listing
+    if "adecco" in u and "/emploi" in u and "/offre/" not in u:
+        return True
+    # Dogfinance : /en/offres? = listing
+    if "dogfinance" in u and "/offres" in u and "?page=" in u:
+        return True
+    # LinkedIn Jobs search
+    if "linkedin" in u and "/jobs/search" in u:
+        return True
+    return False
+
+
+def _extract_from_page_glassdoor(url: str, max_jobs: int) -> list[str]:
+    """Extrait les URLs d'annonces depuis une page de recherche Glassdoor."""
+    urls: list[str] = []
+    seen: set[str] = set()
+    try:
+        time.sleep(random.uniform(2, 4))
+        r = requests.get(url, headers=HEADERS, timeout=20)
+        r.raise_for_status()
+        soup = BeautifulSoup(r.text, "html.parser")
+        for a in soup.select("a[href*='/Job/'], a[href*='job-listing'], a[href*='voir-emploi']"):
+            href = a.get("href", "")
+            if not href or href in seen:
+                continue
+            if "jobs-SRCH" in href or "emplois-SRCH" in href:
+                continue
+            if "glassdoor" not in href.lower():
+                base = "https://www.glassdoor.fr" if "glassdoor.fr" in url.lower() else "https://www.glassdoor.com"
+                full = base + href if href.startswith("/") else href
+            else:
+                full = href if href.startswith("http") else "https://www.glassdoor.com" + href
+            if full not in seen:
+                seen.add(href)
+                urls.append(full)
+            if len(urls) >= max_jobs:
+                return urls
+    except Exception as e:
+        print(f"[search_extract] Glassdoor {url[:60]} : {e}")
+    return urls
+
+
+def _extract_from_page_indeed(url: str, max_jobs: int) -> list[str]:
+    """Extrait les URLs d'annonces depuis une page de recherche Indeed."""
+    urls: list[str] = []
+    seen: set[str] = set()
+    base = "https://fr.indeed.com"
+    try:
+        time.sleep(random.uniform(2, 4))
+        r = requests.get(url, headers=HEADERS, timeout=20)
+        r.raise_for_status()
+        soup = BeautifulSoup(r.text, "html.parser")
+        for a in soup.select("a[href*='/rc/clk'], a[href*='/viewjob'], a[href*='/pagead/clk']"):
+            href = a.get("href", "")
+            if not href or "indeed.com" not in href:
+                continue
+            full = base + href if href.startswith("/") else href
+            if full not in seen:
+                seen.add(full)
+                urls.append(full)
+            if len(urls) >= max_jobs:
+                return urls
+    except Exception as e:
+        print(f"[search_extract] Indeed {url[:60]} : {e}")
+    return urls
+
+
+def _extract_from_page_francetravail(url: str, max_jobs: int) -> list[str]:
+    """Extrait les URLs d'annonces depuis une page de recherche France Travail."""
+    urls: list[str] = []
+    seen: set[str] = set()
+    base = SOURCES["francetravail"]["base"]
+    try:
+        time.sleep(random.uniform(2, 4))
+        r = requests.get(url, headers=HEADERS, timeout=20)
+        r.raise_for_status()
+        soup = BeautifulSoup(r.text, "html.parser")
+        for a in soup.select("a[href*='/offres/recherche/detail/']"):
+            href = a.get("href", "")
+            if not href or href in seen:
+                continue
+            full = base + href if href.startswith("/") else href
+            seen.add(href)
+            urls.append(full)
+            if len(urls) >= max_jobs:
+                return urls
+    except Exception as e:
+        print(f"[search_extract] France Travail {url[:60]} : {e}")
+    return urls
+
+
+def _extract_from_page_wttj(url: str, max_jobs: int) -> list[str]:
+    """WTTJ SPA — Playwright pour extraire les liens depuis une page de recherche."""
+    from playwright.sync_api import sync_playwright
+
+    urls: list[str] = []
+    with sync_playwright() as p:
+        try:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page()
+            page.goto(url, wait_until="load", timeout=25000)
+            time.sleep(2)
+            links = page.query_selector_all("a[href*='/fr/companies/'][href*='/jobs/']")
+            for link in links:
+                href = link.get_attribute("href")
+                if not href:
+                    continue
+                path = href.split("?")[0].rstrip("/")
+                if path.endswith("/jobs"):
+                    continue
+                if "/fr/pages/" in href:
+                    continue
+                if "/jobs/" not in path:
+                    continue
+                full = "https://www.welcometothejungle.com" + href if href.startswith("/") else href
+                if full not in urls:
+                    urls.append(full)
+                if len(urls) >= max_jobs:
+                    break
+            browser.close()
+        except Exception as e:
+            print(f"[search_extract] WTTJ {url[:60]} : {e}")
+    return urls
+
+
+def _extract_from_page_generic(url: str, max_jobs: int, selectors: list[str], base: str, filter_fn=lambda h: True) -> list[str]:
+    """Extracteur générique requests + BeautifulSoup."""
+    urls: list[str] = []
+    seen: set[str] = set()
+    try:
+        time.sleep(random.uniform(2, 4))
+        r = requests.get(url, headers=HEADERS, timeout=20)
+        r.raise_for_status()
+        soup = BeautifulSoup(r.text, "html.parser")
+        for sel in selectors:
+            for a in soup.select(sel):
+                href = a.get("href", "")
+                if not href or href in seen:
+                    continue
+                if not filter_fn(href):
+                    continue
+                full = base + href if href.startswith("/") else (href if href.startswith("http") else base + href)
+                if full not in seen:
+                    seen.add(href)
+                    urls.append(full)
+                if len(urls) >= max_jobs:
+                    return urls
+    except Exception as e:
+        print(f"[search_extract] Generic {url[:60]} : {e}")
+    return urls
+
+
+def extract_job_urls_from_search_page(url: str, max_jobs: int = 15) -> list[str]:
+    """
+    Extrait les URLs d'annonces individuelles depuis une page de recherche (URL fournie par l'utilisateur).
+    Retourne [] si l'URL n'est pas une page de recherche connue ou en cas d'erreur.
+    """
+    u = url.lower()
+    if "glassdoor" in u:
+        return _extract_from_page_glassdoor(url, max_jobs)
+    if "indeed" in u:
+        return _extract_from_page_indeed(url, max_jobs)
+    if "francetravail" in u:
+        return _extract_from_page_francetravail(url, max_jobs)
+    if "welcometothejungle" in u:
+        return _extract_from_page_wttj(url, max_jobs)
+    if "hellowork" in u:
+        return _extract_from_page_generic(
+            url, max_jobs,
+            ["a[href*='/emplois/']"],
+            SOURCES["hellowork"]["base"],
+            lambda h: "/emplois/" in h and ".html" in h
+        )
+    if "meteojob" in u:
+        return _extract_from_page_generic(
+            url, max_jobs,
+            ["a[href*='/emploi/'], a[href*='/Emploi/'], a[href*='/job/']"],
+            SOURCES["meteojob"]["base"],
+            lambda h: not h.startswith("http") or "meteojob.com" in h
+        )
+    if "chooseyourboss" in u:
+        return _extract_from_page_generic(
+            url, max_jobs,
+            ["a[href*='/candidates/offers/']"],
+            SOURCES["chooseyourboss"]["base"],
+            lambda h: True
+        )
+    if "apec" in u:
+        return _extract_from_page_generic(
+            url, max_jobs,
+            ["a[href*='/detail-offre/']"],
+            SOURCES["apec"]["base"],
+            lambda h: True
+        )
+    if "manpower" in u:
+        return _extract_from_page_generic(
+            url, max_jobs,
+            ["a[href*='/offre-emploi/'], a[href*='/job/']"],
+            SOURCES["manpower"]["base"],
+            lambda h: "keywords=" not in h and "offre-emploi?" not in h
+        )
+    if "adecco" in u:
+        return _extract_from_page_generic(
+            url, max_jobs,
+            ["a[href*='/offre/'], a[href*='/emploi/']"],
+            SOURCES["adecco"]["base"],
+            lambda h: "recherche" not in h
+        )
+    if "dogfinance" in u:
+        return _extract_from_page_generic(
+            url, max_jobs,
+            ["a[href*='/offres/'], a[href*='/offre/']"],
+            "https://dogfinance.com",
+            lambda h: "offres?" not in h and "page=" not in h
+        )
+    if "linkedin" in u:
+        return _extract_from_page_generic(
+            url, max_jobs,
+            ["a[href*='/jobs/view/'], a[href*='/job/']"],
+            SOURCES["linkedin"]["base"],
+            lambda h: "linkedin.com" in (h if h.startswith("http") else "") and "/jobs/view/" in h
+        )
+    return []
+
+
 def discover_jobs(
     source: str,
     max_jobs: int = 10,

@@ -157,13 +157,53 @@ async def cmd_pipeline(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "Usage : /pipeline <url> [draft]\n"
             "Ex. /pipeline https://www.welcometothejungle.com/...\n"
-            "Avec 'draft' en fin : crée aussi le brouillon Gmail."
+            "Avec 'draft' en fin : crée aussi le brouillon Gmail.\n"
+            "Tu peux coller une URL de page de recherche (Glassdoor, Indeed, WTTJ, etc.) : les annonces sont extraites et traitées une par une."
         )
         return
     url = parts[1].strip()
     create_draft = len(parts) > 2 and parts[2].lower() == "draft"
     if not url.startswith(("http://", "https://")):
         await update.message.reply_text("L'URL doit commencer par http:// ou https://")
+        return
+
+    # Détection page de recherche : extraire les annonces puis traiter chacune
+    from scheduler.job_discoverer import is_search_page, extract_job_urls_from_search_page
+
+    if is_search_page(url):
+        await update.message.reply_text("Page de recherche détectée. Extraction des annonces...")
+        try:
+            job_urls = await asyncio.to_thread(extract_job_urls_from_search_page, url, 10)
+        except Exception as e:
+            await update.message.reply_text(f"Erreur extraction : {e}")
+            return
+        if not job_urls:
+            await update.message.reply_text("Aucune annonce trouvée sur cette page. Le site peut bloquer le scraping (essayez une URL de fiche directe).")
+            return
+        await update.message.reply_text(f"{len(job_urls)} annonce(s) trouvée(s). Traitement en cours...")
+        results_ok = 0
+        results_fail = 0
+        msgs: list[str] = []
+        for i, job_url in enumerate(job_urls):
+            try:
+                result, err = await asyncio.to_thread(_run_pipeline_sync, job_url, create_draft=False)
+            except Exception as e:
+                err = str(e)
+                result = None
+            if err:
+                results_fail += 1
+                log.warning("Pipeline search item %s: %s", job_url[:50], err)
+            else:
+                results_ok += 1
+                o = result.offre or {}
+                m = result.matching or {}
+                msgs.append(f"• {o.get('entreprise', '?')} — {o.get('titre', '?')} | {m.get('score', '—')} | {result.next_action}")
+            if (i + 1) % 3 == 0:
+                await update.message.reply_text(f"Traité {i + 1}/{len(job_urls)}...")
+        summary = f"Recherche terminée : {results_ok} OK, {results_fail} échec(s).\n\n" + "\n".join(msgs[:8])
+        if len(msgs) > 8:
+            summary += f"\n... et {len(msgs) - 8} autre(s)"
+        await update.message.reply_text(summary)
         return
 
     await update.message.reply_text("Pipeline en cours (extraction, matching, génération)...")
@@ -431,6 +471,36 @@ async def on_chat_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             url = llm_result.get("url") or (_extract_urls(text)[0] if _extract_urls(text) else None)
             create_draft = llm_result.get("create_draft", False)
             if url:
+                from scheduler.job_discoverer import is_search_page, extract_job_urls_from_search_page
+                if is_search_page(url):
+                    await update.message.reply_text("Page de recherche détectée. Extraction des annonces...")
+                    try:
+                        job_urls = await asyncio.to_thread(extract_job_urls_from_search_page, url, 10)
+                    except Exception as e:
+                        await update.message.reply_text(f"Erreur extraction : {e}")
+                        return
+                    if not job_urls:
+                        await update.message.reply_text("Aucune annonce trouvée sur cette page.")
+                        return
+                    await update.message.reply_text(f"{len(job_urls)} annonce(s). Traitement en cours...")
+                    done, failed = 0, 0
+                    msgs = []
+                    for i, ju in enumerate(job_urls):
+                        try:
+                            result, err = await asyncio.to_thread(_run_pipeline_sync, ju, create_draft=False)
+                        except Exception as e:
+                            err = str(e)
+                            result = None
+                        if err:
+                            failed += 1
+                        else:
+                            done += 1
+                            o = (result.offre or {}) if result else {}
+                            msgs.append(f"• {o.get('entreprise', '?')} — {o.get('titre', '?')}")
+                        if (i + 1) % 3 == 0:
+                            await update.message.reply_text(f"Traité {i + 1}/{len(job_urls)}...")
+                    await update.message.reply_text(f"Terminé : {done} OK, {failed} échec(s).\n" + "\n".join(msgs[:8]))
+                    return
                 await update.message.reply_text("Pipeline en cours (extraction, matching, génération)...")
                 try:
                     result, err = await asyncio.to_thread(_run_pipeline_sync, url, create_draft)
@@ -489,6 +559,37 @@ async def on_chat_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         return
 
     url, create_draft = _parse_chat_intent(text)
+    if url:
+        from scheduler.job_discoverer import is_search_page, extract_job_urls_from_search_page
+        if is_search_page(url):
+            await update.message.reply_text("Page de recherche détectée. Extraction des annonces...")
+            try:
+                job_urls = await asyncio.to_thread(extract_job_urls_from_search_page, url, 10)
+            except Exception as e:
+                await update.message.reply_text(f"Erreur extraction : {e}")
+                return
+            if not job_urls:
+                await update.message.reply_text("Aucune annonce trouvée sur cette page.")
+                return
+            await update.message.reply_text(f"{len(job_urls)} annonce(s). Traitement en cours...")
+            done, failed = 0, 0
+            msgs = []
+            for i, ju in enumerate(job_urls):
+                try:
+                    result, err = await asyncio.to_thread(_run_pipeline_sync, ju, create_draft=False)
+                except Exception as e:
+                    err = str(e)
+                    result = None
+                if err:
+                    failed += 1
+                else:
+                    done += 1
+                    o = (result.offre or {}) if result else {}
+                    msgs.append(f"• {o.get('entreprise', '?')} — {o.get('titre', '?')}")
+                if (i + 1) % 3 == 0:
+                    await update.message.reply_text(f"Traité {i + 1}/{len(job_urls)}...")
+            await update.message.reply_text(f"Terminé : {done} OK, {failed} échec(s).\n" + "\n".join(msgs[:8]))
+            return
     if not url:
         want_candidate = any(kw in t for kw in _PIPELINE_KEYWORDS) or "candidate" in t
         if want_candidate and _find_json_blob(text):
@@ -850,7 +951,7 @@ async def cmd_help(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         "Job Search Agent — Panneau de controle\n\n"
         "Tu peux discuter en langage naturel : envoie une URL et dis par ex. "
         "« Candidater sur [url] » ou « Lance le pipeline pour [url] et crée le brouillon ».\n\n"
-        "/pipeline <url> [draft] — Lancer l'orchestrateur (candidature + option brouillon Gmail)\n"
+        "/pipeline <url> [draft] — Lancer l'orchestrateur. Accepte une fiche d'offre ou une page de recherche (annonces extraites puis traitées)\n"
         "/status — Candidatures recentes\n"
         "/offres — Dernieres offres scannees\n"
         "/relances — Relances J+4/J+10 a venir\n"

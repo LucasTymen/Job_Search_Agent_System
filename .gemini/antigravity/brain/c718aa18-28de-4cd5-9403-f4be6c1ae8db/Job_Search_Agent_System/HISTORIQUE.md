@@ -83,6 +83,15 @@
 
 ---
 
+### 2026-03-02 — Scraping page de recherche + déploiement auto
+
+| Pays | Moment clé | Benchmarks / Résultats |
+|------|------------|------------------------|
+| **France** | Scraping page de recherche (Glassdoor, Indeed, WTTJ, etc.) | `job_discoverer.py` : `is_search_page()`, `extract_job_urls_from_search_page()`. Coller une URL de recherche → annonces extraites et traitées individuellement (max 10). Intégré dans `/pipeline` et chatbot Telegram. |
+| **France** | Déploiement automatique GitHub Actions | `.github/workflows/deploy.yml` — push sur `main` → transfert tar + `contabo_safe_deploy.sh`. Secrets : `SSH_HOST`, `SSH_USER`, `SSH_PRIVATE_KEY`. |
+
+---
+
 ## Périmètre géographique
 
 - **Pays principal :** **France** (sources WTTJ, France Travail ; rédaction en français ; déploiement Contabo).
@@ -90,4 +99,4 @@
 
 ---
 
-*Dernière mise à jour : 2026-03-02. Pour le détail des actions par agent, voir `AGENTS_LOG.md`.*
+*Dernière mise à jour : 2026-03-02. Pour le détail des actions par agent, voir `AGENTS_LOG.md`. Pour la procédure de déploiement (manuelle et automatique), voir `scripts/DEPLOIEMENT_SAFE.md`.*

@@ -100,10 +100,10 @@ En dehors du pipeline une-URL, d’autres composants jouent un rôle de type « 
 
 | Composant | Fichier | Rôle |
 |-----------|---------|------|
-| **job_discoverer** | `scheduler/job_discoverer.py` | Découverte d’offres (WTTJ, France Travail, etc.) via Playwright/requests ; peut être pilotée par les requêtes personas (`persona_queries.py`). |
+| **job_discoverer** | `scheduler/job_discoverer.py` | Découverte d’offres (WTTJ, France Travail, etc.) via Playwright/requests ; requêtes personas ; page de recherche : `is_search_page()`, `extract_job_urls_from_search_page()` — coller URL recherche → annonces extraites et traitées une par une. |
 | **DedupStore** | `scheduler/dedup.py` | Éviter de retraiter les mêmes URLs (SQLite). |
 | **followup_runner** | `scheduler/followup_runner.py` | Cron des relances : génération des brouillons J+2, J+4, J+7, J+9. |
-| **Telegram bot** | `scheduler/telegram_bot.py` | Interface de contrôle : `/pipeline`, `/scan`, `/status`, chatbot en langage naturel pour lancer une candidature ou un scan. |
+| **Telegram bot** | `scheduler/telegram_bot.py` | Interface : `/pipeline <url> [draft]` (accepte fiche d'offre ou page de recherche), `/scan`, `/status`, chatbot. Si URL = page de recherche → extraction puis pipeline sur chaque annonce. |
 | **chatbot_llm** | `scheduler/chatbot_llm.py` | Couche LLM : interprétation d'intention (pipeline, raci, agents, help) + contexte RACI injecté (chef de projet, expert_automatisation). Fallback règles si LLM indisponible. |
 
 Ils ne sont pas des « agents » au sens Pydantic (entrée/sortie uniques), mais ils étendent le système de façon modulaire et pilotable.

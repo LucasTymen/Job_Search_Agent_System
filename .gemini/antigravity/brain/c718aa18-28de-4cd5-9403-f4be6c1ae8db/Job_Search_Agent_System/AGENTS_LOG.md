@@ -204,3 +204,27 @@ umpy
 
 **Fonctionnement :** LLM (Groq/OpenAI) interprète l'intention (pipeline, pipeline_all, agents, raci, help). Contexte RACI (chef de projet, expert_automatisation) depuis base_real.json injecté dans le prompt. Fallback vers mots-clés si LLM indisponible ou timeout (8 s).
 
+---
+
+### [2026-03-02] Agent: Cursor (Auto) — Scraping page de recherche
+**Action :** Extraction des annonces depuis une URL de page de recherche, puis traitement individuel
+
+**Fichiers modifiés :**
+- `scheduler/job_discoverer.py` — `is_search_page(url)`, `extract_job_urls_from_search_page(url, max_jobs=15)` ; extracteurs par site (Glassdoor, Indeed, France Travail, WTTJ, HelloWork, Meteojob, ChooseYourBoss, APEC, Manpower, Adecco, Dogfinance, LinkedIn)
+- `scheduler/telegram_bot.py` — Détection page de recherche dans `/pipeline` et chatbot : si URL = page de recherche → extraction des annonces → pipeline sur chacune (max 10)
+
+**Règle :** Coller une URL de recherche (ex. Glassdoor, Indeed, WTTJ) → annonces extraites et traitées une par une. Glassdoor/Indeed peuvent bloquer (403) ; WTTJ (Playwright) et France Travail généralement OK.
+
+---
+
+### [2026-03-02] Agent: Cursor (Auto) — GitHub Actions déploiement
+**Action :** Déploiement automatique sur Contabo via GitHub Actions
+
+**Fichiers créés :**
+- `.github/workflows/deploy.yml` — Trigger push main (ou manuel) ; transfert tar + `contabo_safe_deploy.sh`
+
+**Fichiers modifiés :**
+- `scripts/DEPLOIEMENT_SAFE.md` — section Déploiement automatique (GitHub Actions) avec config secrets
+
+**Secrets requis :** `SSH_HOST`, `SSH_USER`, `SSH_PRIVATE_KEY`
+

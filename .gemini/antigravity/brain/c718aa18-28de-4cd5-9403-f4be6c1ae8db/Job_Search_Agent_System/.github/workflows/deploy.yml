@@ -1,0 +1,47 @@
+# Déploiement automatique sur Contabo à chaque push sur main
+# Prérequis : configurer les secrets GitHub (Settings > Secrets and variables > Actions)
+#   - SSH_HOST : 173.249.4.106 (ou ton IP)
+#   - SSH_USER : root
+#   - SSH_PRIVATE_KEY : contenu de ta clé privée (id_ed25519_contabo ou id_rsa_contabo)
+
+name: Deploy to Contabo
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:  # Permet de lancer manuellement depuis l'onglet Actions
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Transfer files
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+        run: |
+          tar --exclude=.env --exclude=venv --exclude=.git --exclude=__pycache__ \
+              --exclude=.pytest_cache --exclude=htmlcov --exclude='*.db' --exclude='*.log' \
+              -cvf - . | ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new \
+              ${SSH_USER}@${SSH_HOST} "mkdir -p /opt/job_search_agent && cd /opt/job_search_agent && tar -xvf -"
+
+      - name: Run deploy script
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+        run: |
+          ssh -i ~/.ssh/deploy_key ${SSH_USER}@${SSH_HOST} \
+            "cd /opt/job_search_agent && bash scripts/contabo_safe_deploy.sh"
+
+      - name: Summary
+        run: echo "✅ Déploiement terminé sur ${{ secrets.SSH_HOST }}"
