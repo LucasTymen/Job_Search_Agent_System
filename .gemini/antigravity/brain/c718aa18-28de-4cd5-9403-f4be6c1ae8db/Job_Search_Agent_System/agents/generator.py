@@ -93,7 +93,7 @@ class CvAtvGenerator:
                 priorite = (exp.get("priorite_secteur") or {}).get("it_support", "")
                 if priorite not in ("principale", "secondaire"):
                     continue
-            # it_support → periode_it (2000–2022, 22 ans) ; growth/seo → periode_growth (2015–2022)
+            # A.P.S.I. : toujours 2015–2022 (CV rajeuni, psychologie à partir de 2015)
             periode = exp.get("periode") or (
                 exp.get("periode_it") if secteur == "it_support" else exp.get("periode_growth") or exp.get("periode_it")
             )

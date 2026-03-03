@@ -1,0 +1,8 @@
+{
+  "name": "Environnement Python scalup et start up",
+  "slug": "job-search-agent-system",
+  "category": "Environnement Python (scalup & start up)",
+  "tags": ["python", "scalup", "startup", "agents", "job-search", "cv-lettres"],
+  "type": "agentique",
+  "description_court": "Système d'agents recherche d'emploi : CV, LM, prospection, relances."
+}

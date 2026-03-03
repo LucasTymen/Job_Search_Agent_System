@@ -6,7 +6,7 @@
 - **Historique :** `HISTORIQUE.md` — timestamps, pays (France), moments clés, benchmarks.
 - **Architecture agentique :** `ARCHITECTURE_AGENTIQUE.md` — explication de l’approche agentic et rôle de chaque agent.
 - **Sprint corrections :** `SPRINT_CORRECTIONS.md` — plan de sprint collectif (corrections audit, test réel, rapports par agent). Coordination : chef de projet + expert_automatisation.
-- **LLM :** Groq (prioritaire) ou OpenAI `gpt-4o-mini` (via `core/llm_client.py`).
+- **LLM :** `core/llm_client.py` — priorité **OpenAI (GPT)** si `OPENAI_API_KEY`, sinon Groq si `GROQ_API_KEY`, sinon Ollama. Fallback OpenAI si Groq en 429 (non destructif).
 
 ## Workflow Actuel
 1. **Cron principal :** `--mode both` = scan + matching + filtre POSTULER + pipeline full (CV/LM/emails)

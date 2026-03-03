@@ -1,7 +1,10 @@
 """
 Cron dédié aux relances : J+2 (J2), J+4 (J1), J+7 (J1 bis), J+9 (J2 bis).
+Par défaut : ENVOI automatique des relances (tu n'as rien à faire après J0).
 Séquence : J0 → J2 → J1 → J1 → J2.
-Usage : python -m scheduler.followup_runner [--dry-run]
+Usage : python -m scheduler.followup_runner [--dry-run] [--draft]
+  --dry-run : simule sans envoyer
+  --draft   : crée des brouillons au lieu d'envoyer (comportement ancien)
 """
 import argparse
 import json
@@ -30,13 +33,15 @@ def _get_db_path() -> Path:
     return STORAGE_DIR / "applications.db"
 
 
-def run_followups(db_path: Path | None = None, dry_run: bool = False) -> int:
+def run_followups(db_path: Path | None = None, dry_run: bool = False, draft_only: bool = False) -> int:
     """
     Relances J0 → J2 → J1 → J1_bis → J2 à partir des candidatures en base.
-    - J+2 : status in ('J0','envoyee') et delta == 2 → email_j2, status relance_j2
-    - J+4 : status == 'relance_j2' et delta == 4 → email_j1, status relance_j1
-    - J+7 : status == 'relance_j1' et delta == 7 → email_j1_bis, status relance_j1_bis
-    - J+9 : status == 'relance_j1_bis' et delta >= 9 → email_j2_bis, status relance_j2_bis
+    Par défaut : envoi réel des emails (plus besoin de s'en souvenir).
+    - J+2 : status in ('J0','envoyee') et delta == 2 → envoi email_j2, status relance_j2
+    - J+4 : status == 'relance_j2' et delta == 4 → envoi email_j1, status relance_j1
+    - J+7 : status == 'relance_j1' et delta == 7 → envoi email_j1_bis, status relance_j1_bis
+    - J+9 : status == 'relance_j1_bis' et delta >= 9 → envoi email_j2_bis, status relance_j2_bis
+    draft_only=True : crée des brouillons au lieu d'envoyer.
     """
     db_file = db_path or _get_db_path()
     if not db_file.exists():
@@ -80,6 +85,8 @@ def run_followups(db_path: Path | None = None, dry_run: bool = False) -> int:
         canal = data.get("canal_application", {})
         emails = data.get("emails") or {}
         email_contact = canal.get("contact_cible") or data.get("email_trouve", {}).get("email_trouve") or ""
+        cc_str = canal.get("contact_cc") or ""
+        cc_list = [e.strip() for e in cc_str.split(",") if e.strip() and "@" in e] if cc_str else []
         if not email_contact or email_contact == "Inconnu":
             log.debug("Pas d'email pour id=%s %s", id_, offre.get("entreprise", "?"))
             continue
@@ -97,7 +104,7 @@ def run_followups(db_path: Path | None = None, dry_run: bool = False) -> int:
         if delta == 2 and status in ("J0", "envoyee") and mail_j2:
             log.info("Relance J+2 -> %s (%s)", entreprise, email_contact)
             if not dry_run:
-                _send_followup(email_contact, sujet, mail_j2, "j2")
+                _do_followup(email_contact, sujet, mail_j2, "j2", draft_only=draft_only, cc_emails=cc_list)
                 conn.execute("UPDATE applications SET status='relance_j2' WHERE id=?", (id_,))
                 conn.commit()
                 sent += 1
@@ -105,7 +112,7 @@ def run_followups(db_path: Path | None = None, dry_run: bool = False) -> int:
         elif delta == 4 and status == "relance_j2" and mail_j1:
             log.info("Relance J+4 (J1) -> %s (%s)", entreprise, email_contact)
             if not dry_run:
-                _send_followup(email_contact, sujet, mail_j1, "j1")
+                _do_followup(email_contact, sujet, mail_j1, "j1", draft_only=draft_only, cc_emails=cc_list)
                 conn.execute("UPDATE applications SET status='relance_j1' WHERE id=?", (id_,))
                 conn.commit()
                 sent += 1
@@ -113,7 +120,7 @@ def run_followups(db_path: Path | None = None, dry_run: bool = False) -> int:
         elif delta == 7 and status == "relance_j1" and mail_j1_bis:
             log.info("Relance J+7 (J1 bis) -> %s (%s)", entreprise, email_contact)
             if not dry_run:
-                _send_followup(email_contact, sujet, mail_j1_bis, "j1_bis")
+                _do_followup(email_contact, sujet, mail_j1_bis, "j1_bis", draft_only=draft_only, cc_emails=cc_list)
                 conn.execute("UPDATE applications SET status='relance_j1_bis' WHERE id=?", (id_,))
                 conn.commit()
                 sent += 1
@@ -121,7 +128,7 @@ def run_followups(db_path: Path | None = None, dry_run: bool = False) -> int:
         elif delta >= 9 and status == "relance_j1_bis" and mail_j2_bis:
             log.info("Relance J+9 (J2 bis) -> %s (%s)", entreprise, email_contact)
             if not dry_run:
-                _send_followup(email_contact, sujet, mail_j2_bis, "j2_bis")
+                _do_followup(email_contact, sujet, mail_j2_bis, "j2_bis", draft_only=draft_only, cc_emails=cc_list)
                 conn.execute("UPDATE applications SET status='relance_j2_bis' WHERE id=?", (id_,))
                 conn.commit()
                 sent += 1
@@ -131,9 +138,9 @@ def run_followups(db_path: Path | None = None, dry_run: bool = False) -> int:
     return sent
 
 
-def _send_followup(to_email: str, subject: str, body: str, type_: str) -> None:
+def _do_followup(to_email: str, subject: str, body: str, type_: str, draft_only: bool = False, cc_emails: list = None) -> None:
     """
-    Crée un brouillon Gmail via GmailDraftingAgent.
+    Envoie la relance (ou crée un brouillon si draft_only=True). To + Cc si plusieurs contacts.
     """
     from agents.drafting import GmailDraftingAgent
 
@@ -141,18 +148,30 @@ def _send_followup(to_email: str, subject: str, body: str, type_: str) -> None:
     prefix_map = {"j2": "J+2", "j1": "J+4 (J1)", "j1_bis": "J+7 (J1 bis)", "j2_bis": "J+9 (J2 bis)"}
     prefix = prefix_map.get(type_, type_)
     full_subject = f"Re: {subject}" if not subject.startswith("Re:") else subject
-    agent.create_draft(to_email=to_email, subject=full_subject, body=body, attachment_paths=[])
-    log.info("Brouillon %s créé pour %s", prefix, to_email)
+    cc_list = cc_emails or []
+
+    if draft_only:
+        agent.create_draft(to_email=to_email, subject=full_subject, body=body, attachment_paths=[], cc_emails=cc_list)
+        log.info("Brouillon %s créé pour %s%s", prefix, to_email, " (+ Cc)" if cc_list else "")
+    else:
+        ok = agent.send_email(to_email=to_email, subject=full_subject, body=body, attachment_paths=[], cc_emails=cc_list)
+        if ok:
+            log.info("Relance %s envoyée à %s%s", prefix, to_email, " (+ Cc)" if cc_list else "")
+        else:
+            log.warning("Échec envoi %s pour %s", prefix, to_email)
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Relances J+2, J+4, J+7, J+9 (séquence J0→J2→J1→J1→J2)")
+    parser = argparse.ArgumentParser(
+        description="Relances J+2, J+4, J+7, J+9 — envoi automatique (tu envoies J0, le reste part tout seul)."
+    )
     parser.add_argument("--dry-run", action="store_true", help="Simule sans envoyer")
+    parser.add_argument("--draft", action="store_true", help="Crée des brouillons au lieu d'envoyer")
     parser.add_argument("--db", help="Chemin vers applications.db")
     args = parser.parse_args()
 
     db_path = Path(args.db) if args.db else None
-    run_followups(db_path=db_path, dry_run=args.dry_run)
+    run_followups(db_path=db_path, dry_run=args.dry_run, draft_only=args.draft)
 
 
 if __name__ == "__main__":

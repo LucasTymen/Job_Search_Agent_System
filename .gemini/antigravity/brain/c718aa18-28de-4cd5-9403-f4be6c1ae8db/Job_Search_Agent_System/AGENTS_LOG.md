@@ -53,7 +53,8 @@
 - gents/generator.py — Adaptation sujet email et structure JSON large
 - gents/matching.py — Adaptation persona Art/Vente
 - core/orchestrator.py — Intégration de la mise en brouillon
-- equirements.txt — Ajout openai et 
+- 
+equirements.txt — Ajout openai et 
 umpy
 - process_test_offers.py — Script de test pour les 3 offres Art/Vente
 
@@ -252,4 +253,19 @@ umpy
 - `AGENTS_LOG.md` (cette entrée)
 
 **Prochaine étape suggérée :** Commit + push pour synchroniser avec Antigravity ; relecture pipeline (CV/LM/emails) avec nouvelle base pour vérifier cohérence des sorties.
+
+---
+
+### [2026-03-03] Agent: Cursor — LLM : passage à l’API GPT uniquement (plus de Groq)
+**Action :** Utilisation exclusive de l’API GPT (OpenAI) pour tous les appels LLM.
+
+**Fichiers modifiés :**
+- `core/llm_client.py` — priorité OpenAI puis Groq puis Ollama ; Groq conservé (import try/except) ; fallback OpenAI sur 429 quand Groq.
+- `requirements.txt` — `groq>=0.4.0` conservé (non destructif).
+- `AGENTS_ROADMAP.md` — LLM décrit comme « API GPT (OpenAI) ».
+- `.env.example` — exemples `OPENAI_API_KEY` / `OPENAI_MODEL` à la place de GROQ.
+- `core/orchestrator.py` — commentaires « GPT/LLM » au lieu de « GROQ/LLM ».
+- `scripts/orchestrate_campaign.py` — message de lancement avec « API GPT (OpenAI) ».
+
+**Config :** Avec `OPENAI_API_KEY` tout passe par GPT. Groq reste utilisable si tu commentes OPENAI ; rien n'est cassé.
 

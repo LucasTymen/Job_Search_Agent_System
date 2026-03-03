@@ -48,7 +48,7 @@ def load_urls_from_file(path: Path) -> list[str]:
 
 def load_urls_contacts_from_file(path: Path) -> list[tuple[str, str | None]]:
     """
-    Charge des lignes URL [tab|virgule] email.
+    Charge des lignes URL [tab|virgule] email. Plusieurs adresses : "email1, email2" → première en To, les autres en Cc.
     Retourne une liste de (url, email ou None).
     """
     out = []

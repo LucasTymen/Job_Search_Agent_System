@@ -16,6 +16,33 @@ from agents.drafting import GmailDraftingAgent
 from agents.cv_pdf import CvPdfGenerator
 
 
+def _normalize_contacts(entreprise_data: dict, email_override: str | None) -> tuple[str | None, list[str]]:
+    """
+    Retourne (destinataire principal, liste Cc). Plusieurs adresses : première en To, les autres en Cc.
+    email_override peut être "a@x.com, b@x.com" ou "a@x.com; b@x.com". Sinon utilise entreprise_data.
+    """
+    def _valid(s: str) -> bool:
+        return bool(s and str(s).strip() and "@" in str(s))
+
+    if email_override and str(email_override).strip():
+        parts = re.split(r"[,;]+", email_override)
+        parts = [p.strip() for p in parts if _valid(p)]
+        if parts:
+            return parts[0], parts[1:]
+
+    to = entreprise_data.get("email_trouve")
+    if not to or not _valid(str(to)):
+        return None, []
+
+    extra = entreprise_data.get("emails_cc")
+    cc = []
+    if isinstance(extra, list):
+        cc = [e.strip() for e in extra if _valid(str(e))]
+    elif isinstance(extra, str) and extra.strip():
+        cc = [e.strip() for e in extra.split(",") if _valid(e)]
+    return (str(to).strip(), cc)
+
+
 def _fallback_email_from_url(job_url: str) -> str | None:
     """
     Dérive un email de fallback (recrutement@domaine) à partir de l'URL d'offre
@@ -69,7 +96,7 @@ class Orchestrator:
     def run_pipeline(self, job_url: str, create_draft: bool = False, email_override: str | None = None) -> FinalOutput:
         print(f"--- Pipeline démarrée pour : {job_url} ---")
         
-        # 1. Extraction (GROQ/LLM uniquement sur texte public)
+        # 1. Extraction (GPT/LLM sur texte public)
         print("Étape 1: Extraction des données de l'offre...")
         job_data = self.scraper.process(job_url)
         print(f"Offre : {job_data.titre} @ {job_data.entreprise}")
@@ -79,18 +106,25 @@ class Orchestrator:
         match_data = self.matching.process(job_data)
         print(f"Persona : {match_data.persona_selectionne} (Score: {match_data.score})")
 
-        # 3. Extraction Entreprise (email pour brouillon + relances)
+        # 3. Extraction Entreprise (emails pour brouillon + relances ; plusieurs = To + Cc)
         entreprise_data = self.entreprise_scraper.process(job_url)
         if email_override and str(email_override).strip():
             entreprise_data = dict(entreprise_data)
-            entreprise_data["email_trouve"] = email_override.strip()
+            parts = re.split(r"[,;]+", email_override.strip())
+            parts = [p.strip() for p in parts if p.strip() and "@" in p]
+            if parts:
+                entreprise_data["email_trouve"] = parts[0]
+                if len(parts) > 1:
+                    entreprise_data["emails_cc"] = parts[1:]
         elif not entreprise_data.get("email_trouve"):
             fallback = _fallback_email_from_url(job_url)
             if fallback:
                 entreprise_data = dict(entreprise_data)
                 entreprise_data["email_trouve"] = fallback
 
-        # 4. Génération (GROQ/LLM sur profil ANONYMISÉ)
+        to_email, cc_emails = _normalize_contacts(entreprise_data, email_override)
+
+        # 4. Génération (GPT/LLM sur profil ANONYMISÉ)
         print("Étape 3: Génération des assets humanisés...")
         offre_d = job_data.model_dump()
         contact_name = entreprise_data.get("contact_name") or entreprise_data.get("recruteur")
@@ -114,9 +148,10 @@ class Orchestrator:
             },
             canal_application={
                 "canal_recommande": "Email direct",
-                "contact_cible": entreprise_data.get("email_trouve") or "Inconnu"
+                "contact_cible": to_email or "Inconnu",
+                "contact_cc": ",".join(cc_emails) if cc_emails else ""
             },
-            email_trouve={k: str(v) for k, v in entreprise_data.items()},
+            email_trouve={k: (",".join(v) if isinstance(v, list) else str(v)) for k, v in entreprise_data.items()},
             emails=emails or {},
             next_action=match_data.next_action,
             date_relance_j2=(datetime.now() + timedelta(days=2)).strftime('%Y-%m-%d'),
@@ -130,35 +165,30 @@ class Orchestrator:
             )
         )
 
-        # 5. Draft Gmail (Optionnel) — écriture CV/LM sur disque puis brouillon
-        email_dest = entreprise_data.get("email_trouve")
-        if create_draft and match_data.next_action == "POSTULER" and email_dest:
+        # 5. Brouillon J0 (destinataire principal en To, autres contacts en Cc)
+        if create_draft and match_data.next_action == "POSTULER" and to_email:
             titre = job_data.titre or ""
             entreprise = job_data.entreprise or ""
             reference = offre_d.get("reference", "")
             contact_name = contact_name or ""
+            refs = dict(titre_poste=titre, entreprise=entreprise, reference=reference, prenom_recruteur=contact_name)
             raw_sujet = emails.get("sujet") or f"Candidature - {titre}"
-            raw_body = emails.get("email_j0") or ""
-            sujet = sanitize_placeholders(raw_sujet, titre_poste=titre, entreprise=entreprise, reference=reference, prenom_recruteur=contact_name)
-            body = sanitize_placeholders(raw_body, titre_poste=titre, entreprise=entreprise, reference=reference, prenom_recruteur=contact_name)
-            if not sujet.strip():
-                sujet = f"Candidature - {titre}" if titre else "Candidature"
-            if not body.strip():
-                body = "Monsieur, Madame,\n\nVeuillez trouver ci-joint ma candidature.\n\nCordialement,\nLucas Tymen"
-            cv_name, lm_name = attachment_filenames(entreprise, titre)
+            sujet_j0 = sanitize_placeholders(raw_sujet, **refs)
+            if not sujet_j0.strip():
+                sujet_j0 = f"Candidature - {titre}" if titre else "Candidature"
+            raw_body_j0 = emails.get("email_j0") or ""
+            body_j0 = sanitize_placeholders(raw_body_j0, **refs)
+            if not body_j0.strip():
+                body_j0 = "Monsieur, Madame,\n\nVeuillez trouver ci-joint ma candidature.\n\nCordialement,\nLucas Tymen"
             out_dir = getattr(self, "_output_dir", None) or os.path.join(os.path.dirname(os.path.dirname(__file__)), "outputs")
             os.makedirs(os.path.join(out_dir, "cvs"), exist_ok=True)
             os.makedirs(os.path.join(out_dir, "lms"), exist_ok=True)
             pdf_gen = CvPdfGenerator(output_dir=out_dir)
+            cv_name, lm_name = attachment_filenames(entreprise, titre)
             cv_path = pdf_gen.generate(cv_name, cv_data)
             lm_path = pdf_gen.generate_lm(lm_name, lm_text)
             attachment_paths = [p for p in [cv_path, lm_path] if p and os.path.exists(p)]
-            self.drafter.create_draft(
-                email_dest,
-                sujet,
-                body,
-                attachment_paths
-            )
-            print("Brouillon créé avec succès.")
+            self.drafter.create_draft(to_email, sujet_j0, body_j0, attachment_paths, cc_emails=cc_emails or None)
+            print("Brouillon J0 créé (To + Cc si plusieurs contacts). Les relances J+2, J+4, J+7, J+9 seront envoyées automatiquement.")
 
         return output

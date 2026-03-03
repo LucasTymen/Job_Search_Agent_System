@@ -45,7 +45,7 @@ def main():
         "source": "Recherche manuelle"
     }
 
-    print("Lancement de la campagne agentique avec Groq...")
+    print("Lancement de la campagne agentique avec API GPT (OpenAI)...")
     report = orchestrator.run_pipeline("https://orange.jobs/jobs/offer/135965", create_draft=True)
 
     print("\n--- RAPPORT FINAL GÉNÉRÉ PAR AGENT ---")
