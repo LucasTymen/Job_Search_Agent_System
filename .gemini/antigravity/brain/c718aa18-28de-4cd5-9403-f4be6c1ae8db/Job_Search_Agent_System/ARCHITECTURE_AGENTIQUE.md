@@ -80,7 +80,7 @@ Les trois s’appuient sur les mêmes directives de rédaction et sur le profil 
 | Agent | Fichier | Type | Rôle | Entrées | Sorties |
 |-------|---------|------|------|--------|--------|
 | **CvPdfGenerator** | `agents/cv_pdf.py` | Déterministe | Produire les PDF du CV et de la LM à partir du markdown/texte, avec les noms de fichiers selon la charte (société, intitulé). | Nom de fichier, données CV ou texte LM | Chemin(s) des fichiers PDF |
-| **GmailDraftingAgent** | `agents/drafting.py` | Déterministe (IMAP) | Créer un brouillon Gmail avec sujet, corps et pièces jointes (CV + LM PDF). | Email destinataire, sujet, corps, liste de chemins de fichiers | Succès/échec (brouillon créé ou non) |
+| **GmailDraftingAgent** | `agents/drafting.py` | Déterministe (IMAP + SMTP) | Créer un brouillon Gmail (J0) ou **envoyer** un email (relances) ; To + Cc si plusieurs contacts. | Email(s) To, sujet, corps, pièces jointes, cc_emails | Succès/échec |
 
 ### 3.5 Stratégie et rapport (support)
 
@@ -102,7 +102,7 @@ En dehors du pipeline une-URL, d’autres composants jouent un rôle de type « 
 |-----------|---------|------|
 | **job_discoverer** | `scheduler/job_discoverer.py` | Découverte d’offres (WTTJ, France Travail, etc.) via Playwright/requests ; requêtes personas ; page de recherche : `is_search_page()`, `extract_job_urls_from_search_page()` — coller URL recherche → annonces extraites et traitées une par une. |
 | **DedupStore** | `scheduler/dedup.py` | Éviter de retraiter les mêmes URLs (SQLite). |
-| **followup_runner** | `scheduler/followup_runner.py` | Cron des relances : génération des brouillons J+2, J+4, J+7, J+9. |
+| **followup_runner** | `scheduler/followup_runner.py` | Cron des relances : **envoi automatique** des emails J+2, J+4, J+7, J+9 (SMTP). To + Cc depuis result_json. Option `--draft` pour brouillons uniquement. |
 | **Telegram bot** | `scheduler/telegram_bot.py` | Interface : `/pipeline <url> [draft]` (accepte fiche d'offre ou page de recherche), `/scan`, `/status`, chatbot. Si URL = page de recherche → extraction puis pipeline sur chaque annonce. |
 | **chatbot_llm** | `scheduler/chatbot_llm.py` | Couche LLM : interprétation d'intention (pipeline, raci, agents, help) + contexte RACI injecté (chef de projet, expert_automatisation). Fallback règles si LLM indisponible. |
 
@@ -127,5 +127,7 @@ Ils ne sont pas des « agents » au sens Pydantic (entrée/sortie uniques), mais
 ```
 
 ---
+
+**Directives en vigueur (orchestrateur et chef de projet)** : voir **`AGENTS_DIRECTIVES.md`** — relances auto, To/Cc, CV 2015–2022. Ces rôles prennent connaissance des directives et informent les autres agents.
 
 *Pour la chronologie et les benchmarks, voir `HISTORIQUE.md`. Pour les règles de coordination et le workflow, voir `AGENTS_ROADMAP.md`.*

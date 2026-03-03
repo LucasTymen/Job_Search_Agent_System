@@ -269,3 +269,50 @@ umpy
 
 **Config :** Avec `OPENAI_API_KEY` tout passe par GPT. Groq reste utilisable si tu commentes OPENAI ; rien n'est cassé.
 
+---
+
+### [2026-03-03] Agent: Cursor — Relances automatiques (envoi SMTP) + To/Cc + CV rajeuni + classement projet
+**Action :** Base de connaissance actualisée : relances envoyées automatiquement (plus de brouillons à envoyer), tous les contacts en To/Cc, CV A.P.S.I. 2015–2022 uniquement, identité projet.
+
+**Relances automatiques :**
+- `agents/drafting.py` — ajout `send_email()` (SMTP Gmail, même identifiants que brouillons). Les relances J+2, J+4, J+7, J+9 sont **envoyées** par le système.
+- `scheduler/followup_runner.py` — par défaut envoi réel ; option `--draft` pour ne créer que des brouillons. L’utilisateur envoie uniquement le J0 ; le cron (ex. 8h) envoie les relances aux bons jours.
+- `core/orchestrator.py` — brouillon J0 uniquement (plus de création des 4 brouillons de relance en batch).
+
+**Plusieurs adresses (To + Cc) :**
+- `agents/drafting.py` — `create_draft(..., cc_emails=...)` et `send_email(..., cc_emails=...)`. Première adresse en **To**, les autres en **Cc**.
+- `core/orchestrator.py` — `_normalize_contacts()` ; `canal_application.contact_cible` (To) et `contact_cc` (chaîne comma-separated) ; override/fichier : `"email1, email2"` → To + Cc.
+- `scheduler/followup_runner.py` — lit `contact_cc` depuis `result_json` et passe les Cc à chaque relance.
+- Fichier URLs : `url	email1, email2` → première en To, les autres en Cc.
+
+**CV rajeuni (A.P.S.I. 2015–2022) :**
+- `resources/base_real.json` et `resources/cv_base_datas_pour_candidatures.json` — A.P.S.I. toujours en 2015–2022 ; plus de « 22 ans » ni « 2000–2022 ». `exposition_seniorite` par défaut operationnelle ; `regles_periode_apsi`, `reference_canonique_periodes_roles`, personas IT alignés.
+- `agents/generator.py` — commentaire période A.P.S.I. 2015–2022.
+
+**Classement projet :**
+- `PROJECT.md` et `project_manifest.json` — nom du projet : **Environnement Python scalup et start up** ; catégorie, tags (python, scalup, startup, agents, job-search, cv-lettres).
+
+**Fichiers modifiés/créés :**
+- `agents/drafting.py`, `core/orchestrator.py`, `scheduler/followup_runner.py`, `agents/generator.py`
+- `resources/base_real.json`, `resources/cv_base_datas_pour_candidatures.json`
+- `RELANCE_PROSPECTION.md`, `scripts/batch_apply_urls.py`, `.env.example`
+- `PROJECT.md`, `project_manifest.json`
+- `AGENTS_LOG.md` (cette entrée)
+
+**Prochaine étape suggérée :** Lancer un batch avec une URL + plusieurs emails en override pour valider To/Cc ; vérifier envoi relances en dry-run puis sans --dry-run sur une candidature test.
+
+---
+
+### [2026-03-03] Agent: Cursor — Directives orchestrateur & chef de projet
+**Action :** Les agents sont au clair : l'orchestrateur et le chef de projet prennent connaissance des directives et informent les autres.
+
+**Fichiers créés :**
+- `AGENTS_DIRECTIVES.md` — document unique des **directives en vigueur** (relances auto, To/Cc, CV 2015–2022, LLM). En tête : instruction explicite pour **l'orchestrateur** et **le chef de projet** de lire en priorité, d'appliquer les règles selon les cas et **d'informer les autres agents**.
+
+**Fichiers modifiés :**
+- `AGENTS_README.md` — section « Orchestrateur et chef de projet » en tête ; lien AGENTS_DIRECTIVES en priorité ; workflow rapide étape 1 = lire directives et propager.
+- `AGENTS_ROADMAP.md` — ligne Coordination : orchestrateur et chef de projet prennent connaissance de AGENTS_DIRECTIVES et informent les autres.
+- `ARCHITECTURE_AGENTIQUE.md` — GmailDraftingAgent (IMAP + SMTP, To/Cc), followup_runner (envoi auto), CanalApplication (contact_cc) ; note de bas de document : directives en vigueur dans AGENTS_DIRECTIVES, rôles qui prennent connaissance et informent les autres.
+
+**Résultat :** Tout agent (ou humain) qui reprend le projet voit dans AGENTS_README que l'orchestrateur et le chef de projet doivent lire AGENTS_DIRECTIVES et propager les consignes ; les autres agents reçoivent les règles via le code et la doc mis à jour.
+

@@ -3,6 +3,7 @@
 ## Architecture & Coordination
 - **Source de vérité :** `resources/base_real.json` (ou `cv_base_datas_pour_candidatures.json`, `base.json`). ATV Strict.
 - **Coordination :** Triplet `AGENTS_LOG.md`, `AGENTS_ROADMAP.md`, `AGENTS_TODO.md`.
+- **Directives :** **L'orchestrateur** et **le chef de projet** prennent connaissance de **`AGENTS_DIRECTIVES.md`** en priorité, appliquent les règles qui s'imposent et **informent les autres agents** (génération, matching, drafting, followup, Telegram). Voir `AGENTS_README.md`.
 - **Historique :** `HISTORIQUE.md` — timestamps, pays (France), moments clés, benchmarks.
 - **Architecture agentique :** `ARCHITECTURE_AGENTIQUE.md` — explication de l’approche agentic et rôle de chaque agent.
 - **Sprint corrections :** `SPRINT_CORRECTIONS.md` — plan de sprint collectif (corrections audit, test réel, rapports par agent). Coordination : chef de projet + expert_automatisation.
@@ -10,7 +11,7 @@
 
 ## Workflow Actuel
 1. **Cron principal :** `--mode both` = scan + matching + filtre POSTULER + pipeline full (CV/LM/emails)
-2. **Cron relances :** `followup_runner` — séquence **J0 → J2 → J1 → J1 → J2** (J+2, J+4, J+7, J+9) via Gmail drafts
+2. **Cron relances :** `followup_runner` — séquence **J0 → J2 → J1 → J1 → J2** (J+2, J+4, J+7, J+9) : **envoi automatique** des relances (SMTP). L’utilisateur envoie uniquement le brouillon J0 ; les relances partent seules. Option `--draft` pour ne créer que des brouillons.
 3. **Découverte :** requêtes persona-driven (`persona_queries.py`)
 4. **Matching :** déterministe Python (MatchingEngine), seuils POSTULER >= 60
 5. **Telegram :** `/pipeline <url> [draft]` — accepte fiche d'offre ou **page de recherche** (Glassdoor, Indeed, WTTJ, etc.) : annonces extraites et traitées une par une. Chatbot langage naturel.
@@ -23,8 +24,9 @@
 
 ## CV (Structure & Génération)
 - **Structure markdown stricte :** titre poste, référence annonce, entreprise, cartouche (nom, ville, tél, email, landing), PROFIL, COMPETENCES PRINCIPALES, OUTILS, EXPERIENCE, FORMATION, ATOUTS, LANGUES, DISPONIBILITE. Mode **final** (`render_cv_markdown(..., final=True)`) : sans lignes `#`, tél/email sur 2 lignes, section ATOUTS.
-- **Secteur it_support :** période 2000–2022 (periode_it), expériences filtrées (priorite_secteur principale/secondaire), compétences/ATOUTS depuis `competences_detaillees.it_support_systemes`, tri APSI en tête.
+- **Secteur it_support / A.P.S.I. :** période affichée **2015–2022** uniquement (CV rajeuni ; plus de « 22 ans » ni 2000–2022). Expériences filtrées (priorite_secteur), compétences/ATOUTS depuis `competences_detaillees.it_support_systemes`, tri APSI en tête.
 - **Charte pièces jointes :** `core/utils.attachment_filenames(entreprise, titre_poste)` → `CV_Lucas_Tymen_{société}_{intitulé}.pdf`, `LM_...`.
+- **Contacts multiples :** première adresse en **To**, les autres en **Cc** (brouillon J0 et relances). Fichier URLs : `url	email1, email2` ; `canal_application.contact_cible` + `contact_cc` en base pour followup_runner.
 
 ## Prochaines Étapes (Phase 3+)
 - **PDF Engine :** `agents/cv_pdf.py` — génération à brancher sur le CV markdown ou sur `cv_data` avec noms de fichiers charte.
