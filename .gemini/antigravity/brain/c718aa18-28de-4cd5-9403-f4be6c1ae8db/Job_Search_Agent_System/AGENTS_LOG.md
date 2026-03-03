@@ -228,3 +228,28 @@ umpy
 
 **Secrets requis :** `SSH_HOST`, `SSH_USER`, `SSH_PRIVATE_KEY`
 
+---
+
+### [2026-03-03] Agent: Cursor — Base de connaissance & données data-driven SquidResearch
+**Action :** Actualisation de la base de connaissance (anti-hallucination) et ajout pièce manquante pour échange Antigravity.
+
+**Base de connaissance (sources de vérité) :**
+- `resources/base_real.json` et `resources/cv_base_datas_pour_candidatures.json` alignés sur les **données réelles** SquidResearch (plus de 1388 entreprises/s ni ×5700 speedup).
+- Benchmark companies : 52 sociétés, 75 % succès (39/52), 0,51 s/société, 0 blocage 0 erreur — source `logs/benchmark_companies/benchmark_companies_report_20260303_113140.json`.
+- Tests module company-emails : objectif 100 % coverage, 0 % erreur API (documenté par les tests ; pas de rapport JSON avec % exact ; vérifier `make test-company-emails-cov`).
+- Pipeline 90 s / 25 s : cadré comme **spécification design** (timeout, message intermédiaire), pas résultat de benchmark enregistré.
+- Enrichissement par identités : 1 identité (Yateo), 10 prospects avec email, ~731 s (preuve de bout en bout, pas KPI volume).
+- Unified enrichment : 97,67 % succès tests (objectif 95 %), 70,59 % coverage (objectif 95 % non atteint) — `reports/unified_enrichment_test_report.json`.
+- **Détection accept-all / honeypot** ajoutée : test VRFY sur adresse factice (MX only sans existant) ; si 250 → warning dans le benchmark et la liste affinée. Entrée dans `benchmarks_data_driven`, `preuves_business_contextualisees`, `arguments_reutilisables.growth_systems`, `formulations_cv` (OSINT).
+
+**Règles anti-hallucination :**
+- Chiffres autorisés : 52 sociétés benchmark, 75 % succès discovery, 0,51 s/société, 0 blocage 0 erreur, 90 s timeout design, 97,67 % / 70,59 % unified enrichment.
+- `exemples_interdits` : ajout de « 1388 entreprises/seconde », « ×5700 speedup WHOIS ».
+
+**Fichiers modifiés :**
+- `resources/base_real.json`
+- `resources/cv_base_datas_pour_candidatures.json`
+- `AGENTS_LOG.md` (cette entrée)
+
+**Prochaine étape suggérée :** Commit + push pour synchroniser avec Antigravity ; relecture pipeline (CV/LM/emails) avec nouvelle base pour vérifier cohérence des sorties.
+
