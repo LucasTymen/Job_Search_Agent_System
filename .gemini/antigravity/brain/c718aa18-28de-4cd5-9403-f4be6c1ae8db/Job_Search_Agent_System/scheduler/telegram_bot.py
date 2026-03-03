@@ -377,7 +377,7 @@ def _parse_intent_with_llm(text: str) -> dict | None:
     return parse_intent_llm(text, base_json)
 
 
-def _last_scan_job_urls(max_urls: int = 5) -> list[str]:
+def _last_scan_job_urls(max_urls: int = 30) -> list[str]:
     """Retourne les URLs d'offres du dernier scan JSON (lien), au plus max_urls."""
     scan_dir = PROJECT_ROOT / "storage" / "scans"
     if not scan_dir.exists():
@@ -443,7 +443,7 @@ async def on_chat_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             return
         # Intent pipeline_all
         if intent == "pipeline_all":
-            job_urls = _last_scan_job_urls(max_urls=5)
+            job_urls = _last_scan_job_urls(max_urls=30)
             if not job_urls:
                 await update.message.reply_text(
                     "Aucun scan JSON avec offres trouvé. Lance /scan puis attends 2–3 min, puis réessaie."
@@ -464,7 +464,10 @@ async def on_chat_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
                 except Exception as e:
                     failed += 1
                     log.warning("Pipeline %s : %s", job_url[:50], e)
-            await update.message.reply_text(f"Terminé : {done} traité(s), {failed} échec(s).")
+            msg = f"Terminé : {done} traité(s), {failed} échec(s)."
+            if done > 0:
+                msg += "\n\nLes candidatures sont enregistrées. Pour créer des brouillons Gmail : /pipeline <url> draft sur chaque offre (dossier Brouillons, à envoyer manuellement)."
+            await update.message.reply_text(msg)
             return
         # Intent pipeline : utiliser URL du LLM ou extraction regex
         if intent == "pipeline":
@@ -534,7 +537,7 @@ async def on_chat_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         return
 
     if any(kw in t for kw in _PIPELINE_ALL_KEYWORDS):
-        job_urls = _last_scan_job_urls(max_urls=5)
+        job_urls = _last_scan_job_urls(max_urls=30)
         if not job_urls:
             await update.message.reply_text(
                 "Aucun scan JSON avec offres trouvé. Lance /scan puis attends 2–3 min, puis réessaie."
@@ -552,10 +555,13 @@ async def on_chat_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
                     done += 1
                     o = (result.offre or {}) if result else {}
                     await update.message.reply_text(f"✓ {o.get('entreprise', '?')} — {o.get('titre', '?')}")
-            except Exception as e:
-                failed += 1
-                log.warning("Pipeline %s : %s", job_url[:50], e)
-        await update.message.reply_text(f"Terminé : {done} traité(s), {failed} échec(s).")
+                except Exception as e:
+                    failed += 1
+                    log.warning("Pipeline %s : %s", job_url[:50], e)
+        msg = f"Terminé : {done} traité(s), {failed} échec(s)."
+        if done > 0:
+            msg += "\n\nPour des brouillons Gmail : /pipeline <url> draft sur chaque offre."
+        await update.message.reply_text(msg)
         return
 
     url, create_draft = _parse_chat_intent(text)
@@ -737,7 +743,7 @@ async def cmd_offres(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             try:
                 data = json.loads(text)
                 meta = data.get("metadata", {})
-                offres = data.get("offres", [])[:10]
+                offres = data.get("offres", [])[:20]
                 total = meta.get("nombre_offres", len(data.get("offres", [])))
                 msg = f"Dernier scan : {latest.name}\nTotal : {total} offre(s)\n\n"
                 for o in offres:
