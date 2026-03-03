@@ -2,8 +2,10 @@
 Orchestrateur Hybrid - Combine extraction LLM et matching déterministe Python.
 """
 import os
+import re
 import json
 from datetime import datetime, timedelta
+from urllib.parse import urlparse
 from core.models import FinalOutput, ScraperOutput, MatchingOutput, ATVCheck
 from core.utils import sanitize_placeholders, attachment_filenames
 from core.atv_validator import valider_donnees
@@ -12,6 +14,46 @@ from agents.matching import MatchingEngine
 from agents.generator import CvAtvGenerator, LmCoordinator, EmailEngine
 from agents.drafting import GmailDraftingAgent
 from agents.cv_pdf import CvPdfGenerator
+
+
+def _fallback_email_from_url(job_url: str) -> str | None:
+    """
+    Dérive un email de fallback (recrutement@domaine) à partir de l'URL d'offre
+    pour permettre la création du brouillon quand EntrepriseScraper ne trouve pas d'email.
+    L'utilisateur pourra corriger le destinataire dans Gmail si besoin.
+    """
+    if not job_url or not job_url.strip():
+        return None
+    try:
+        parsed = urlparse(job_url)
+        path = (parsed.path or "").strip("/")
+        host = (parsed.netloc or "").lower()
+        slug = None
+        if "lever.co" in host:
+            parts = path.split("/")
+            if len(parts) >= 1 and parts[0]:
+                slug = parts[0]
+        elif "ashbyhq.com" in host:
+            parts = path.split("/")
+            if len(parts) >= 1 and parts[0]:
+                slug = parts[0]
+        elif "welcometothejungle.com" in host:
+            m = re.search(r"/companies/([^/]+)/", path)
+            if m:
+                slug = m.group(1)
+        elif "greenhouse.io" in host:
+            parts = path.split("/")
+            for i, p in enumerate(parts):
+                if p == "jobs" and i > 0:
+                    slug = parts[i - 1]
+                    break
+            if not slug and parts:
+                slug = parts[0]
+        if slug and re.match(r"^[a-z0-9][a-z0-9.-]*$", slug, re.I):
+            return f"recrutement@{slug}.com"
+    except Exception:
+        pass
+    return None
 
 class Orchestrator:
     def __init__(self, base_json: dict):
@@ -24,7 +66,7 @@ class Orchestrator:
         self.email_gen = EmailEngine(base_json=base_json)
         self.drafter = GmailDraftingAgent()
 
-    def run_pipeline(self, job_url: str, create_draft: bool = False) -> FinalOutput:
+    def run_pipeline(self, job_url: str, create_draft: bool = False, email_override: str | None = None) -> FinalOutput:
         print(f"--- Pipeline démarrée pour : {job_url} ---")
         
         # 1. Extraction (GROQ/LLM uniquement sur texte public)
@@ -37,8 +79,16 @@ class Orchestrator:
         match_data = self.matching.process(job_data)
         print(f"Persona : {match_data.persona_selectionne} (Score: {match_data.score})")
 
-        # 3. Extraction Entreprise
+        # 3. Extraction Entreprise (email pour brouillon + relances)
         entreprise_data = self.entreprise_scraper.process(job_url)
+        if email_override and str(email_override).strip():
+            entreprise_data = dict(entreprise_data)
+            entreprise_data["email_trouve"] = email_override.strip()
+        elif not entreprise_data.get("email_trouve"):
+            fallback = _fallback_email_from_url(job_url)
+            if fallback:
+                entreprise_data = dict(entreprise_data)
+                entreprise_data["email_trouve"] = fallback
 
         # 4. Génération (GROQ/LLM sur profil ANONYMISÉ)
         print("Étape 3: Génération des assets humanisés...")
@@ -80,7 +130,7 @@ class Orchestrator:
             )
         )
 
-        # 5. Draft Gmail (Optionnel) — écriture CV/LM sur disque puis brouillon (si email trouvé)
+        # 5. Draft Gmail (Optionnel) — écriture CV/LM sur disque puis brouillon
         email_dest = entreprise_data.get("email_trouve")
         if create_draft and match_data.next_action == "POSTULER" and email_dest:
             titre = job_data.titre or ""

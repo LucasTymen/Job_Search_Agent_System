@@ -43,6 +43,8 @@ Texte de l'offre :
         
         try:
             res = self.llm.chat_completion(prompt, system_prompt="Tu es un extracteur de données RH précis.", json_mode=True)
+            if not isinstance(res, dict):
+                raise ValueError("Réponse LLM non-dict")
             return ScraperOutput(**res)
         except Exception as e:
             print(f"Erreur d'extraction LLM: {e}")
@@ -56,14 +58,26 @@ Texte de l'offre :
             )
 
     def process(self, url: str) -> ScraperOutput:
+        fallback = ScraperOutput(
+            titre="Poste Inconnu",
+            entreprise="Entreprise Inconnue",
+            description_clean="Contenu inaccessible (erreur HTTP).",
+            mots_cles_detectes=[],
+            niveau_poste="Intermediaire",
+            probleme_detecte="N/A",
+        )
         try:
             response = requests.get(url, headers=HEADERS, timeout=20)
             response.raise_for_status()
             clean_text = self.clean_html(response.text)
+        except requests.HTTPError as e:
+            print(f"Erreur scraping URL {url}: {e}")
+            return fallback
         except Exception as e:
             print(f"Erreur scraping URL {url}: {e}")
-            clean_text = "Contenu inaccessible."
-            
+            return fallback
+        if not clean_text or len(clean_text.strip()) < 50:
+            return fallback
         return self.extract_with_llm(url, clean_text)
 
 class EntrepriseScraper:

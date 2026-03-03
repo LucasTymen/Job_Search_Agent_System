@@ -144,6 +144,90 @@ def _run_pipeline_sync(job_url: str, create_draft: bool) -> tuple:
         return (None, err_msg)
 
 
+def _parse_latotale_urls(text: str) -> list[str]:
+    """
+    Extrait toutes les URLs d'un message /latotale.
+    Accepte : une URL, ou plusieurs séparées par des virgules ou des retours à la ligne.
+    Découpe uniquement quand une virgule (ou \\n) est suivie d'une nouvelle URL (https?://) pour ne pas casser les paramètres (ex. ?x=1,2).
+    """
+    urls: list[str] = []
+    # Séparer : virgule ou newline suivis d'une URL (lookahead https?://)
+    for part in re.split(r"[\n,]\s*(?=https?://)", text, flags=re.IGNORECASE):
+        part = part.strip()
+        if not part:
+            continue
+        part = part.rstrip(".,;:)")
+        if part.startswith(("http://", "https://")) and part not in urls:
+            urls.append(part)
+    return urls
+
+
+@guard
+async def cmd_latotale(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """
+    La totale : séquence complète par URL.
+    - Une URL  → analyse + scraping + traitement + candidature multicanale (email brouillon) + enregistrement pour relances.
+    - Plusieurs URLs (séparées par des virgules ou retours à la ligne) → même séquence pour chaque URL.
+    Usage : /latotale <url>   ou   /latotale <url1>, <url2>, <url3>
+    """
+    text = (update.message.text or "").strip()
+    # Enlever la commande pour ne garder que le reste (URLs)
+    rest = text[len("/latotale") :].strip() if text.lower().startswith("/latotale") else text
+    urls = _parse_latotale_urls(rest)
+
+    if not urls:
+        await update.message.reply_text(
+            "Usage : /latotale <url>  ou  /latotale <url1>, <url2>, <url3>\n\n"
+            "Pour chaque URL : analyse → scraping → traitement → candidature (brouillon email si contact trouvé) → enregistrement pour la séquence de relances J+2, J+4, J+7, J+9."
+        )
+        return
+
+    n = len(urls)
+    await update.message.reply_text(
+        f"La totale : {n} URL(s). Séquence complète pour chacune (scraping → traitement → candidature multicanale email + suivi relances)…"
+    )
+
+    results_ok = 0
+    results_fail = 0
+    drafts_created = 0
+    lines: list[str] = []
+    BATCH_PROGRESS = 5  # un message tous les N URLs pour éviter le flood
+
+    for i, job_url in enumerate(urls):
+        try:
+            result, err = await asyncio.to_thread(_run_pipeline_sync, job_url, create_draft=True)
+        except Exception as e:
+            err = str(e)
+            result = None
+        if err:
+            results_fail += 1
+            log.warning("Latotale %s: %s", job_url[:50], err)
+            lines.append(f"❌ {job_url[:50]}… — {err[:40]}")
+        else:
+            results_ok += 1
+            o = result.offre or {}
+            titre = o.get("titre", "?")
+            ent = o.get("entreprise", "?")
+            action = result.next_action or "?"
+            email_dest = (result.email_trouve or {}).get("email_trouve") if isinstance(result.email_trouve, dict) else None
+            draft = bool(email_dest and result.next_action == "POSTULER")
+            if draft:
+                drafts_created += 1
+            lines.append(f"✓ {ent} — {titre} | {action}" + (" | Brouillon" if draft else ""))
+
+        if (i + 1) % BATCH_PROGRESS == 0 and (i + 1) < n:
+            await update.message.reply_text(f"Traité {i + 1}/{n}…")
+
+    summary = (
+        f"La totale terminée : {results_ok} OK, {results_fail} échec(s), {drafts_created} brouillon(s) créé(s).\n\n"
+        + "\n".join(lines[:15])
+    )
+    if len(lines) > 15:
+        summary += f"\n… et {len(lines) - 15} autre(s)"
+    summary += "\n\nLes candidatures sont enregistrées ; les relances J+2, J+4, J+7, J+9 seront créées (cron ou /relances)."
+    await update.message.reply_text(summary[:4000])
+
+
 @guard
 async def cmd_pipeline(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     """
@@ -957,6 +1041,7 @@ async def cmd_help(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         "Job Search Agent — Panneau de controle\n\n"
         "Tu peux discuter en langage naturel : envoie une URL et dis par ex. "
         "« Candidater sur [url] » ou « Lance le pipeline pour [url] et crée le brouillon ».\n\n"
+        "/latotale <url> ou <url1>, <url2>, … — Séquence complète par URL : analyse, scraping, traitement, candidature (email), enregistrement relances J+2/J+4/J+7/J+9\n"
         "/pipeline <url> [draft] — Lancer l'orchestrateur. Accepte une fiche d'offre ou une page de recherche (annonces extraites puis traitées)\n"
         "/status — Candidatures recentes\n"
         "/offres — Dernieres offres scannees\n"
@@ -999,6 +1084,7 @@ def main():
 
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("help", cmd_help))
+    app.add_handler(CommandHandler("latotale", cmd_latotale))
     app.add_handler(CommandHandler("pipeline", cmd_pipeline))
     app.add_handler(CommandHandler("status", cmd_status))
     app.add_handler(CommandHandler("offres", cmd_offres))

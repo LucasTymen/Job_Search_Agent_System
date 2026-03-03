@@ -1,0 +1,60 @@
+{
+  "date": "2026-03-03T13:54:53.679746",
+  "total": 5,
+  "ok": 5,
+  "failed": 0,
+  "drafts_created": 1,
+  "total_elapsed_sec": 242.5,
+  "results": [
+    {
+      "url": "https://www.welcometothejungle.com/fr/companies/incenteev/jobs/marketing-growth-lead_paris",
+      "ok": true,
+      "entreprise": "Incenteev",
+      "titre": "Head of Growth Marketing",
+      "action": "À surveiller",
+      "draft_created": false,
+      "error": null,
+      "elapsed_sec": 60.9
+    },
+    {
+      "url": "https://www.welcometothejungle.com/fr/companies/stockly/jobs/no-code-ai-automation-engineer_paris",
+      "ok": true,
+      "entreprise": "Stockly",
+      "titre": "No Code / AI Automation Engineer (n8n, make, zapier)",
+      "action": "POSTULER",
+      "draft_created": true,
+      "error": null,
+      "elapsed_sec": 56.8
+    },
+    {
+      "url": "https://www.welcometothejungle.com/fr/companies/lemlist/jobs/growth-lead-us_paris",
+      "ok": true,
+      "entreprise": "lemlist",
+      "titre": "Growth lead US",
+      "action": "À surveiller",
+      "draft_created": false,
+      "error": null,
+      "elapsed_sec": 47.3
+    },
+    {
+      "url": "https://jobs.ashbyhq.com/langfuse/1225fa3d-d590-41d2-b798-ef927320fb2e",
+      "ok": true,
+      "entreprise": "Langfuse",
+      "titre": "Senior Backend Engineer",
+      "action": "À surveiller",
+      "draft_created": false,
+      "error": null,
+      "elapsed_sec": 37.2
+    },
+    {
+      "url": "https://jobs.ashbyhq.com/ramp/83075cf0-9c22-4475-9c6b-e21923a96df8",
+      "ok": true,
+      "entreprise": "Entreprise Inconnue",
+      "titre": "Poste Inconnu",
+      "action": "PASSER",
+      "draft_created": false,
+      "error": null,
+      "elapsed_sec": 38.3
+    }
+  ]
+}

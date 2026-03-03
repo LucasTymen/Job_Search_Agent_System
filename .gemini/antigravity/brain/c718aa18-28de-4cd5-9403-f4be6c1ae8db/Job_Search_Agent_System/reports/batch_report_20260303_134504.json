@@ -1,0 +1,80 @@
+{
+  "date": "2026-03-03T13:45:04.268053",
+  "total": 7,
+  "ok": 7,
+  "failed": 0,
+  "drafts_created": 0,
+  "total_elapsed_sec": 258.2,
+  "results": [
+    {
+      "url": "https://jobs.lever.co/ppro/78402c6c-b35f-4095-abd9-1622e2c551c7",
+      "ok": true,
+      "entreprise": "Entreprise Inconnue",
+      "titre": "Poste Inconnu",
+      "action": "PASSER",
+      "draft_created": false,
+      "error": null,
+      "elapsed_sec": 7.1
+    },
+    {
+      "url": "https://jobs.lever.co/applike/521e8c3c-f373-42d3-b733-8cc235af28ef",
+      "ok": true,
+      "entreprise": "Entreprise Inconnue",
+      "titre": "Poste Inconnu",
+      "action": "PASSER",
+      "draft_created": false,
+      "error": null,
+      "elapsed_sec": 7.0
+    },
+    {
+      "url": "https://jobs.ashbyhq.com/onebrief/7d293d54-3b25-499f-81e5-4a5d4f73e2a9",
+      "ok": true,
+      "entreprise": "Entreprise Inconnue",
+      "titre": "Poste Inconnu",
+      "action": "PASSER",
+      "draft_created": false,
+      "error": null,
+      "elapsed_sec": 45.5
+    },
+    {
+      "url": "https://jobs.lever.co/octoenergy/2e77f196-3f3e-4808-bb60-0562ce0f7b2d",
+      "ok": true,
+      "entreprise": "Entreprise Inconnue",
+      "titre": "Poste Inconnu",
+      "action": "PASSER",
+      "draft_created": false,
+      "error": null,
+      "elapsed_sec": 35.3
+    },
+    {
+      "url": "https://job-boards.greenhouse.io/joinforage/jobs/4892105007",
+      "ok": true,
+      "entreprise": "Forage Business Development",
+      "titre": "Account Executive",
+      "action": "À surveiller",
+      "draft_created": false,
+      "error": null,
+      "elapsed_sec": 46.9
+    },
+    {
+      "url": "https://jobs.ashbyhq.com/camunda/5ec769b8-793c-4eb5-bfe6-722d75abae80",
+      "ok": true,
+      "entreprise": "Entreprise Inconnue",
+      "titre": "Poste Inconnu",
+      "action": "PASSER",
+      "draft_created": false,
+      "error": null,
+      "elapsed_sec": 73.2
+    },
+    {
+      "url": "https://jobs.lever.co/skello/652312a5-958a-497c-9913-8926ae787194",
+      "ok": true,
+      "entreprise": "Entreprise Inconnue",
+      "titre": "Poste Inconnu",
+      "action": "PASSER",
+      "draft_created": false,
+      "error": null,
+      "elapsed_sec": 39.4
+    }
+  ]
+}

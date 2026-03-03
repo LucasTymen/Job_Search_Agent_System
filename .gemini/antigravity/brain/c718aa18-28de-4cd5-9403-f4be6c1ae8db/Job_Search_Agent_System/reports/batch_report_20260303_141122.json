@@ -1,0 +1,140 @@
+{
+  "date": "2026-03-03T14:11:22.377700",
+  "total": 13,
+  "ok": 13,
+  "failed": 0,
+  "drafts_created": 6,
+  "total_elapsed_sec": 761.9,
+  "results": [
+    {
+      "url": "https://www.welcometothejungle.com/fr/companies/paladin/jobs/b2b-growth-marketer-h-f-x_paris",
+      "ok": true,
+      "entreprise": "Paladin",
+      "titre": "B2B Growth Marketer (H/F/X)",
+      "action": "POSTULER",
+      "draft_created": true,
+      "error": null,
+      "elapsed_sec": 60.3
+    },
+    {
+      "url": "https://www.welcometothejungle.com/fr/companies/ignition-program/jobs/backend-developer-greentech_paris",
+      "ok": true,
+      "entreprise": "Ignition Program",
+      "titre": "Backend Developer Python",
+      "action": "À surveiller",
+      "draft_created": false,
+      "error": null,
+      "elapsed_sec": 56.1
+    },
+    {
+      "url": "https://www.welcometothejungle.com/fr/companies/communaute-beta-gouv/jobs/mission-pole-data-ia-developpeur-senior_paris",
+      "ok": true,
+      "entreprise": "beta.gouv.fr",
+      "titre": "Développeur Senior",
+      "action": "À surveiller",
+      "draft_created": false,
+      "error": null,
+      "elapsed_sec": 62.9
+    },
+    {
+      "url": "https://www.welcometothejungle.com/fr/companies/galadrim/jobs/ingenieur-ia_paris",
+      "ok": true,
+      "entreprise": "Galadrim",
+      "titre": "Ingénieur(e) IA",
+      "action": "À surveiller",
+      "draft_created": false,
+      "error": null,
+      "elapsed_sec": 64.2
+    },
+    {
+      "url": "https://www.welcometothejungle.com/fr/companies/77-foods/jobs/head-of-automation_paris",
+      "ok": true,
+      "entreprise": "La Vie™",
+      "titre": "IT Manager",
+      "action": "POSTULER",
+      "draft_created": true,
+      "error": null,
+      "elapsed_sec": 59.9
+    },
+    {
+      "url": "https://www.welcometothejungle.com/fr/companies/thinkeo/jobs/ux-ui-designer_paris",
+      "ok": true,
+      "entreprise": "cobl",
+      "titre": "UX/UI Designer",
+      "action": "POSTULER",
+      "draft_created": true,
+      "error": null,
+      "elapsed_sec": 57.1
+    },
+    {
+      "url": "https://www.welcometothejungle.com/fr/companies/quarante-soixante/jobs/chef-fe-de-projet-agence-design-tech_paris",
+      "ok": true,
+      "entreprise": "40/60 studio",
+      "titre": "Chef.fe de Projet",
+      "action": "POSTULER",
+      "draft_created": true,
+      "error": null,
+      "elapsed_sec": 60.2
+    },
+    {
+      "url": "https://www.welcometothejungle.com/fr/companies/pollux/jobs/designer-innovation-senior_paris",
+      "ok": true,
+      "entreprise": "Pollux",
+      "titre": "Designer Innovation Senior",
+      "action": "POSTULER",
+      "draft_created": true,
+      "error": null,
+      "elapsed_sec": 62.5
+    },
+    {
+      "url": "https://www.welcometothejungle.com/fr/companies/naboo/jobs/videaste-motion-design-montage_paris",
+      "ok": true,
+      "entreprise": "Naboo",
+      "titre": "Vidéaste (Motion Design / Montage)",
+      "action": "À surveiller",
+      "draft_created": false,
+      "error": null,
+      "elapsed_sec": 53.4
+    },
+    {
+      "url": "https://www.welcometothejungle.com/fr/companies/passage-du-desir/jobs/conseiller-ere-de-vente-25h-h-f_paris",
+      "ok": true,
+      "entreprise": "Passage Du Désir",
+      "titre": "Conseiller.ère de vente 25h H/F",
+      "action": "POSTULER",
+      "draft_created": true,
+      "error": null,
+      "elapsed_sec": 63.1
+    },
+    {
+      "url": "https://www.welcometothejungle.com/fr/companies/machefert-group/jobs/responsable-des-ventes-comptes-haut-de-gamme-luxe-h-f_paris",
+      "ok": true,
+      "entreprise": "Machefert Group",
+      "titre": "Responsable des Ventes Comptes Haut de Gamme & Luxe (H/F)",
+      "action": "À surveiller",
+      "draft_created": false,
+      "error": null,
+      "elapsed_sec": 58.6
+    },
+    {
+      "url": "https://www.welcometothejungle.com/fr/companies/junto/jobs/charge-e-seo-h-f_boulogne-billancourt",
+      "ok": true,
+      "entreprise": "Junto",
+      "titre": "Consultant SEO - Alternance (H/F)",
+      "action": "À surveiller",
+      "draft_created": false,
+      "error": null,
+      "elapsed_sec": 57.7
+    },
+    {
+      "url": "https://jobs.lever.co/partoo/0723968a-ae0c-4a0f-b10f-1229b7ec32af",
+      "ok": true,
+      "entreprise": "Entreprise Inconnue",
+      "titre": "Poste Inconnu",
+      "action": "PASSER",
+      "draft_created": false,
+      "error": null,
+      "elapsed_sec": 42.8
+    }
+  ]
+}

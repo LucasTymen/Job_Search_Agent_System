@@ -1,0 +1,27 @@
+# URL	email (contact fourni pour brouillon + relances)
+# Paladin
+https://www.welcometothejungle.com/fr/companies/paladin/jobs/b2b-growth-marketer-h-f-x_paris	talentacquisition@paladin-technologies.com
+# Ignition Program (cabinet — contact via site, pas d'email fourni : fallback)
+https://www.welcometothejungle.com/fr/companies/ignition-program/jobs/backend-developer-greentech_paris
+# Communauté Beta Gouv (recrutement via site)
+https://www.welcometothejungle.com/fr/companies/communaute-beta-gouv/jobs/mission-pole-data-ia-developpeur-senior_paris
+# Galadrim (site carrière, approche directe)
+https://www.welcometothejungle.com/fr/companies/galadrim/jobs/ingenieur-ia_paris
+# 77 Foods
+https://www.welcometothejungle.com/fr/companies/77-foods/jobs/head-of-automation_paris	jobs@laviefoods.com
+# Thinkeo
+https://www.welcometothejungle.com/fr/companies/thinkeo/jobs/ux-ui-designer_paris	hello@thinkeo.io
+# Quarante Soixante
+https://www.welcometothejungle.com/fr/companies/quarante-soixante/jobs/chef-fe-de-projet-agence-design-tech_paris	hello@4060.fr
+# Pollux
+https://www.welcometothejungle.com/fr/companies/pollux/jobs/designer-innovation-senior_paris	contact@pollux.fr
+# Naboo (recrutement via WTTJ — fallback)
+https://www.welcometothejungle.com/fr/companies/naboo/jobs/videaste-motion-design-montage_paris
+# Passage du Désir
+https://www.welcometothejungle.com/fr/companies/passage-du-desir/jobs/conseiller-ere-de-vente-25h-h-f_paris	rh@passagedudesir.fr
+# Machefert Group
+https://www.welcometothejungle.com/fr/companies/machefert-group/jobs/responsable-des-ventes-comptes-haut-de-gamme-luxe-h-f_paris	recrutement@machefert.com
+# Junto
+https://www.welcometothejungle.com/fr/companies/junto/jobs/charge-e-seo-h-f_boulogne-billancourt	hello@junto.fr
+# Partoo (Lever)
+https://jobs.lever.co/partoo/0723968a-ae0c-4a0f-b10f-1229b7ec32af	recrutement@partoo.com
